@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rochford Weather</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+        .location {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .sun-times {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .sun-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sun-icon {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+        }
+        .sun-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        .sun-time {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+        .forecast-day {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .forecast-day:last-child {
+            border-bottom: none;
+        }
+        .forecast-date {
+            flex: 1;
+            font-weight: 500;
+        }
+        .forecast-icon {
+            font-size: 1.8rem;
+            margin: 0 15px;
+        }
+        .forecast-temps {
+            text-align: right;
+        }
+        .temp-high {
+            font-weight: 600;
+        }
+        .temp-low {
+            opacity: 0.7;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .current {
+            text-align: center;
+            padding: 10px 0;
+        }
+        .current-temp {
+            font-size: 3.5rem;
+            font-weight: 300;
+        }
+        .current-desc {
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .section-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Rochford Weather</h1>
+        <p class="location">Essex, UK</p>
+
+        <div id="content">
+            <div class="card loading">Loading weather data...</div>
+        </div>
+    </div>
+
+    <script>
+        // Rochford, Essex coordinates
+        const LAT = 51.5821;
+        const LON = 0.7068;
+
+        const weatherCodes = {
+            0: { icon: '☀️', desc: 'Clear sky' },
+            1: { icon: '🌤️', desc: 'Mainly clear' },
+            2: { icon: '⛅', desc: 'Partly cloudy' },
+            3: { icon: '☁️', desc: 'Overcast' },
+            45: { icon: '🌫️', desc: 'Foggy' },
+            48: { icon: '🌫️', desc: 'Rime fog' },
+            51: { icon: '🌧️', desc: 'Light drizzle' },
+            53: { icon: '🌧️', desc: 'Drizzle' },
+            55: { icon: '🌧️', desc: 'Dense drizzle' },
+            61: { icon: '🌧️', desc: 'Light rain' },
+            63: { icon: '🌧️', desc: 'Rain' },
+            65: { icon: '🌧️', desc: 'Heavy rain' },
+            71: { icon: '🌨️', desc: 'Light snow' },
+            73: { icon: '🌨️', desc: 'Snow' },
+            75: { icon: '🌨️', desc: 'Heavy snow' },
+            80: { icon: '🌦️', desc: 'Rain showers' },
+            81: { icon: '🌦️', desc: 'Rain showers' },
+            82: { icon: '⛈️', desc: 'Heavy showers' },
+            95: { icon: '⛈️', desc: 'Thunderstorm' },
+            96: { icon: '⛈️', desc: 'Thunderstorm with hail' },
+            99: { icon: '⛈️', desc: 'Thunderstorm with hail' }
+        };
+
+        function getWeatherInfo(code) {
+            return weatherCodes[code] || { icon: '❓', desc: 'Unknown' };
+        }
+
+        function formatTime(timeStr) {
+            const date = new Date(timeStr);
+            return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function formatDay(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            if (date.toDateString() === today.toDateString()) return 'Today';
+            if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+            return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+        }
+
+        async function fetchWeather() {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset&timezone=Europe%2FLondon&forecast_days=7`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                renderWeather(data);
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="card">
+                        <p>Unable to load weather data. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderWeather(data) {
+            const current = data.current;
+            const daily = data.daily;
+            const currentWeather = getWeatherInfo(current.weather_code);
+
+            let html = `
+                <div class="card">
+                    <div class="current">
+                        <span style="font-size: 4rem;">${currentWeather.icon}</span>
+                        <div class="current-temp">${Math.round(current.temperature_2m)}°C</div>
+                        <div class="current-desc">${currentWeather.desc}</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">Sun Times Today</div>
+                    <div class="sun-times">
+                        <div class="sun-item">
+                            <span class="sun-icon">🌅</span>
+                            <span class="sun-label">Sunrise</span>
+                            <span class="sun-time">${formatTime(daily.sunrise[0])}</span>
+                        </div>
+                        <div class="sun-item">
+                            <span class="sun-icon">🌇</span>
+                            <span class="sun-label">Sunset</span>
+                            <span class="sun-time">${formatTime(daily.sunset[0])}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">7-Day Forecast</div>
+            `;
+
+            for (let i = 0; i < daily.time.length; i++) {
+                const weather = getWeatherInfo(daily.weather_code[i]);
+                html += `
+                    <div class="forecast-day">
+                        <span class="forecast-date">${formatDay(daily.time[i])}</span>
+                        <span class="forecast-icon">${weather.icon}</span>
+                        <div class="forecast-temps">
+                            <span class="temp-high">${Math.round(daily.temperature_2m_max[i])}°</span>
+                            <span class="temp-low">${Math.round(daily.temperature_2m_min[i])}°</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            document.getElementById('content').innerHTML = html;
+        }
+
+        fetchWeather();
+    </script>
+</body>
+</html>
