@@ -18,105 +18,155 @@
             color: #fff;
         }
         .container {
-            max-width: 600px;
+            max-width: 1200px;
             margin: 0 auto;
         }
-        h1 {
+        .header {
             text-align: center;
-            margin-bottom: 10px;
-            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
         }
         .location {
-            text-align: center;
             opacity: 0.8;
-            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: 250px 200px 1fr;
+            gap: 20px;
+            align-items: start;
         }
         .card {
             background: rgba(255,255,255,0.15);
             backdrop-filter: blur(10px);
             border-radius: 16px;
             padding: 20px;
-            margin-bottom: 20px;
         }
         .sun-times {
             display: flex;
-            justify-content: space-around;
-            text-align: center;
+            flex-direction: column;
+            gap: 20px;
         }
         .sun-item {
             display: flex;
-            flex-direction: column;
             align-items: center;
+            gap: 12px;
         }
         .sun-icon {
-            font-size: 2.5rem;
-            margin-bottom: 8px;
+            font-size: 2rem;
+        }
+        .sun-details {
+            display: flex;
+            flex-direction: column;
         }
         .sun-label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             opacity: 0.8;
         }
         .sun-time {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 600;
+        }
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
         }
         .forecast-day {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        .forecast-day:last-child {
-            border-bottom: none;
+            text-align: center;
+            padding: 15px 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
         }
         .forecast-date {
-            flex: 1;
+            font-size: 0.85rem;
             font-weight: 500;
+            margin-bottom: 8px;
         }
         .forecast-icon {
-            font-size: 1.8rem;
-            margin: 0 15px;
+            font-size: 2rem;
+            margin-bottom: 8px;
         }
         .forecast-temps {
-            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
         .temp-high {
             font-weight: 600;
+            font-size: 1.1rem;
         }
         .temp-low {
             opacity: 0.7;
+            font-size: 0.9rem;
         }
         .loading {
             text-align: center;
             padding: 40px;
+            grid-column: 1 / -1;
         }
         .current {
             text-align: center;
-            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .current-icon {
+            font-size: 3.5rem;
         }
         .current-temp {
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 300;
         }
         .current-desc {
             opacity: 0.8;
             margin-top: 5px;
+            font-size: 0.9rem;
         }
         .section-title {
-            font-size: 0.9rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             opacity: 0.7;
             margin-bottom: 15px;
         }
+        @media (max-width: 900px) {
+            .dashboard {
+                grid-template-columns: 1fr 1fr;
+            }
+            .forecast-card {
+                grid-column: 1 / -1;
+            }
+            .forecast-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        @media (max-width: 500px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            .forecast-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Rochford Weather</h1>
-        <p class="location">Essex, UK</p>
+        <div class="header">
+            <h1>Rochford Weather</h1>
+            <p class="location">Essex, UK</p>
+        </div>
 
-        <div id="content">
+        <div id="content" class="dashboard">
             <div class="card loading">Loading weather data...</div>
         </div>
     </div>
@@ -192,38 +242,10 @@
             const daily = data.daily;
             const currentWeather = getWeatherInfo(current.weather_code);
 
-            let html = `
-                <div class="card">
-                    <div class="current">
-                        <span style="font-size: 4rem;">${currentWeather.icon}</span>
-                        <div class="current-temp">${Math.round(current.temperature_2m)}°C</div>
-                        <div class="current-desc">${currentWeather.desc}</div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="section-title">Sun Times Today</div>
-                    <div class="sun-times">
-                        <div class="sun-item">
-                            <span class="sun-icon">🌅</span>
-                            <span class="sun-label">Sunrise</span>
-                            <span class="sun-time">${formatTime(daily.sunrise[0])}</span>
-                        </div>
-                        <div class="sun-item">
-                            <span class="sun-icon">🌇</span>
-                            <span class="sun-label">Sunset</span>
-                            <span class="sun-time">${formatTime(daily.sunset[0])}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="section-title">7-Day Forecast</div>
-            `;
-
+            let forecastHtml = '';
             for (let i = 0; i < daily.time.length; i++) {
                 const weather = getWeatherInfo(daily.weather_code[i]);
-                html += `
+                forecastHtml += `
                     <div class="forecast-day">
                         <span class="forecast-date">${formatDay(daily.time[i])}</span>
                         <span class="forecast-icon">${weather.icon}</span>
@@ -235,7 +257,42 @@
                 `;
             }
 
-            html += '</div>';
+            const html = `
+                <div class="card">
+                    <div class="current">
+                        <span class="current-icon">${currentWeather.icon}</span>
+                        <div class="current-temp">${Math.round(current.temperature_2m)}°C</div>
+                        <div class="current-desc">${currentWeather.desc}</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-title">Sun Times</div>
+                    <div class="sun-times">
+                        <div class="sun-item">
+                            <span class="sun-icon">🌅</span>
+                            <div class="sun-details">
+                                <span class="sun-label">Sunrise</span>
+                                <span class="sun-time">${formatTime(daily.sunrise[0])}</span>
+                            </div>
+                        </div>
+                        <div class="sun-item">
+                            <span class="sun-icon">🌇</span>
+                            <div class="sun-details">
+                                <span class="sun-label">Sunset</span>
+                                <span class="sun-time">${formatTime(daily.sunset[0])}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card forecast-card">
+                    <div class="section-title">7-Day Forecast</div>
+                    <div class="forecast-grid">
+                        ${forecastHtml}
+                    </div>
+                </div>
+            `;
             document.getElementById('content').innerHTML = html;
         }
 
